@@ -1,0 +1,19 @@
+{
+    "name": "toastnz/opensearch",
+    "description": "A simple OpenSearch wrapper for SilverStripe, built on top of the official OpenSearch PHP client.",
+    "type": "silverstripe-vendormodule",
+    "keywords": ["silverstripe", "search", "fuzzy", "fulltext", "boosting", "similarity", "ranking"],
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Leandro Palmieri",
+            "email": "p@beetpix.com"
+        }
+    ],
+    "require": {
+        "silverstripe/cms": "^6",
+        "silverstripe/framework": "^6",
+        "silverstripe/vendor-plugin": "^2",
+        "opensearch-project/opensearch-php": "^2.5"
+    }
+}

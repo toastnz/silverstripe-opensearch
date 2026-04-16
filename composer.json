@@ -13,7 +13,6 @@
     "require": {
         "silverstripe/cms": "^6",
         "silverstripe/framework": "^6",
-        "silverstripe/vendor-plugin": "^2",
         "opensearch-project/opensearch-php": "^2.5"
     }
 }

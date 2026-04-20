@@ -113,6 +113,9 @@ Examples:
 
 - `Rooms` should usually be `integer`
 - `Price` should usually be `float`
+- SilverStripe `Date` and `Datetime` field strings can be used directly in `fields` or `filters`
+
+If an existing field already has the wrong mapping, run the manager task with `--action=reset` and then reindex. OpenSearch cannot reliably replace an existing field mapping in place.
 - `PublishDate` should usually be `date`
 
 If you change filter or field mappings, recreate or update the index and then reindex the documents.

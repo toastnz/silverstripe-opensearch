@@ -64,14 +64,14 @@ class SiteSearchIndex extends OpenSearchIndex
         $this->fields = [
             'Title' => ['type' => 'text'],
             'Content' => ['type' => 'text'],
-            'PublishDate' => ['type' => 'date'],
+            'PublishDate' => 'Datetime',
         ];
         $this->settings = [];
         $this->aliases = [];
         $this->searchFields = ['Title^2', 'Content', 'SearchContent', 'ElementalArea.Elements.Title'];
         $this->filters = [
             'SubsiteID' => ['type' => 'integer'],
-            'PublishDate' => ['type' => 'date'],
+            'PublishDate' => 'Datetime',
             'HasRoof' => ['type' => 'boolean'],
         ];
         $this->includedClasses = [SiteTree::class, File::class];
@@ -90,12 +90,14 @@ class SiteSearchIndex extends OpenSearchIndex
 ```php
 $this->fields = [
     'Title' => ['type' => 'text'],
-    'PublishDate' => ['type' => 'date'],
+    'PublishDate' => 'Datetime',
     'Price' => ['type' => 'float'],
     'Rooms' => ['type' => 'integer'],
     'HasRoof' => ['type' => 'boolean'],
 ];
 ```
+
+SilverStripe DB type strings are supported for field mappings, including `Varchar`, `Text`, `HTMLText`, `Int`, `Boolean`, `Date`, and `Datetime`.
 
 Nested field paths such as `ElementalArea.Elements.Title` are supported and become nested `properties` entries in the mapping.
 
@@ -163,13 +165,14 @@ public function SearchContent(): string
 $this->filters = [
     'SubsiteID' => ['type' => 'integer'],
     'Status' => 'keyword',
-    'PublishDate' => ['type' => 'date'],
+    'PublishDate' => 'Datetime',
 ];
 ```
 
 Rules:
 
 - string shorthand like `'Status' => 'keyword'` is supported
+- SilverStripe DB type strings like `'PublishDate' => 'Datetime'` are supported
 - bare string entries like `'SubsiteID'` are supported and default to `keyword`
 - omitted types default to `keyword`
 - undeclared runtime filters are ignored

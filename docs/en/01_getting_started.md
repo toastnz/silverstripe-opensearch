@@ -85,6 +85,7 @@ class SiteSearchIndex extends OpenSearchIndex
         $this->fields = [
             'Title' => ['type' => 'text'],
             'Content' => ['type' => 'text'],
+            'PublishDate' => 'Datetime',
         ];
         $this->searchFields = ['Title^2', 'Content'];
         $this->filters = [

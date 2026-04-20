@@ -53,6 +53,8 @@ $results = OpenSearch::singleton()->search('annual report', null, [
 ]);
 ```
 
+Array `sort` options are merged into the generated request body, so you do not need to provide a full custom body just to sort.
+
 The helper reserves these option keys for its own behavior:
 
 - `fields`

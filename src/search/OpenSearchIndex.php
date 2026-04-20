@@ -85,6 +85,25 @@ class OpenSearchIndex
         ];
     }
 
+    public function normaliseMappingFields(array $fields): array
+    {
+        $normalisedFields = [];
+
+        foreach ($fields as $field => $config) {
+            if (!is_string($field)) {
+                continue;
+            }
+
+            $normalisedField = $this->normaliseFieldReference($field);
+
+            if ($normalisedField !== null) {
+                $normalisedFields[$normalisedField] = $this->normaliseMappingFieldConfig($config);
+            }
+        }
+
+        return $normalisedFields;
+    }
+
     public function getDefinition(): array
     {
         $definition = [];
@@ -371,7 +390,11 @@ class OpenSearchIndex
         }
 
         foreach ($fieldNames as $field) {
-            $this->assignDocumentFieldValue($document, $field, $this->extractFieldValue($record, $field));
+            $this->assignDocumentFieldValue(
+                $document,
+                $field,
+                $this->normaliseDocumentFieldValue($field, $this->extractFieldValue($record, $field))
+            );
         }
 
         $this->appendImplicitDocumentFields($document, $record);
@@ -948,19 +971,7 @@ class OpenSearchIndex
 
     protected function getConfiguredMappingFields(): array
     {
-        $mappingFields = [];
-
-        foreach ($this->fields as $field => $config) {
-            if (!is_string($field)) {
-                continue;
-            }
-
-            $normalisedField = $this->normaliseFieldReference($field);
-
-            if ($normalisedField !== null) {
-                $mappingFields[$normalisedField] = is_array($config) ? $config : [];
-            }
-        }
+        $mappingFields = $this->normaliseMappingFields($this->fields);
 
         foreach ($this->getConfiguredSearchFields() as $field) {
             if (!is_string($field)) {
@@ -1004,7 +1015,7 @@ class OpenSearchIndex
             }
 
             if (is_string($config)) {
-                $config = ['type' => $config];
+                $config = $this->normaliseMappingFieldConfig($config);
             }
 
             if (!is_array($config)) {
@@ -1016,6 +1027,123 @@ class OpenSearchIndex
         }
 
         return $normalisedFilters;
+    }
+
+    protected function normaliseMappingFieldConfig($config): array
+    {
+        if (is_array($config)) {
+            return $config;
+        }
+
+        if (!is_string($config)) {
+            return [];
+        }
+
+        $type = trim(preg_replace('/\(.*$/', '', $config) ?? '');
+
+        if ($type === '') {
+            return [];
+        }
+
+        if (str_contains($type, '\\')) {
+            $type = substr($type, strrpos($type, '\\') + 1);
+        }
+
+        $lowerType = strtolower($type);
+        $openSearchTypes = [
+            'binary',
+            'boolean',
+            'byte',
+            'completion',
+            'date',
+            'date_nanos',
+            'double',
+            'flattened',
+            'float',
+            'geo_point',
+            'geo_shape',
+            'half_float',
+            'integer',
+            'ip',
+            'keyword',
+            'long',
+            'nested',
+            'object',
+            'rank_feature',
+            'rank_features',
+            'scaled_float',
+            'search_as_you_type',
+            'short',
+            'text',
+            'token_count',
+            'wildcard',
+        ];
+
+        if ($type === $lowerType && in_array($lowerType, $openSearchTypes, true)) {
+            return ['type' => $lowerType];
+        }
+
+        $silverStripeTypes = [
+            'boolean' => ['type' => 'boolean'],
+            'currency' => ['type' => 'double'],
+            'date' => ['type' => 'date'],
+            'datetime' => ['type' => 'date'],
+            'decimal' => ['type' => 'double'],
+            'double' => ['type' => 'double'],
+            'enum' => ['type' => 'keyword'],
+            'float' => ['type' => 'float'],
+            'htmltext' => ['type' => 'text'],
+            'htmlvarchar' => ['type' => 'text'],
+            'int' => ['type' => 'integer'],
+            'integer' => ['type' => 'integer'],
+            'multienum' => ['type' => 'keyword'],
+            'percentage' => ['type' => 'double'],
+            'text' => ['type' => 'text'],
+            'time' => ['type' => 'keyword'],
+            'varchar' => ['type' => 'text'],
+        ];
+
+        $normalisedType = strtolower(preg_replace('/^db/i', '', $type) ?? $type);
+
+        if (isset($silverStripeTypes[$normalisedType])) {
+            return $silverStripeTypes[$normalisedType];
+        }
+
+        return [];
+    }
+
+    protected function normaliseDocumentFieldValue(string $field, $value)
+    {
+        $mappingFields = $this->getConfiguredMappingFields();
+
+        if (($mappingFields[$field]['type'] ?? null) !== 'date') {
+            return $value;
+        }
+
+        return $this->normaliseDateFieldValue($value);
+    }
+
+    protected function normaliseDateFieldValue($value)
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('c');
+        }
+
+        if (is_array($value)) {
+            return array_map(fn($item) => $this->normaliseDateFieldValue($item), $value);
+        }
+
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $value = trim($value);
+
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})(?:\.\d+)?$/', $value, $matches)) {
+            return $matches[1] . 'T' . $matches[2];
+        }
+
+        return $value;
     }
 
     protected function buildFilterQueries(array $filters): array

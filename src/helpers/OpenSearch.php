@@ -63,6 +63,11 @@ class OpenSearch
             $params['body'] = $index->buildSearchBody($searchTerm, $options);
         }
 
+        if (isset($params['sort']) && is_array($params['sort'])) {
+            $params['body']['sort'] = $params['sort'];
+            unset($params['sort']);
+        }
+
         unset($params['fields'], $params['filters'], $params['query'], $params['return_raw']);
 
         $response = $this->getSearchService()->search($params);
@@ -80,7 +85,7 @@ class OpenSearch
         $indices = $this->getSearchService()->indices();
         $body = array_replace_recursive(
             $index->getDefinition(),
-            $this->buildIndexBody($fields ?: $index->getFields(), $options)
+            $this->buildIndexBody($fields === [] ? [] : $index->normaliseMappingFields($fields), $options)
         );
         $params = $this->stripHelperOptions($options);
         $params['index'] = $index->getIndexName();

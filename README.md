@@ -60,6 +60,7 @@ class SiteSearchIndex extends OpenSearchIndex
         $this->fields = [
             'Title' => ['type' => 'text'],
             'Content' => ['type' => 'text'],
+            'PublishDate' => 'Datetime',
         ];
         $this->searchFields = [
             'Title^2',
@@ -69,7 +70,7 @@ class SiteSearchIndex extends OpenSearchIndex
         ];
         $this->filters = [
             'SubsiteID' => ['type' => 'integer'],
-            'PublishDate' => ['type' => 'date'],
+            'PublishDate' => 'Datetime',
         ];
         $this->includedClasses = [SiteTree::class, File::class];
         $this->excludedClasses = [

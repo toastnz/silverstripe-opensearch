@@ -10,6 +10,11 @@ class OpenSearchWeightField extends NumericField
 {
     private string $searchFieldName = '';
 
+    public function Type()
+    {
+        return 'numeric range';
+    }
+
     public function setSearchFieldName(string $searchFieldName): static
     {
         $this->searchFieldName = $searchFieldName;

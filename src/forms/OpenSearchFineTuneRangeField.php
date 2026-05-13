@@ -6,6 +6,11 @@ use SilverStripe\Core\Convert;
 
 class OpenSearchFineTuneRangeField extends OpenSearchFineTuneNumericField
 {
+    public function Type()
+    {
+        return 'numeric range';
+    }
+
     public function Field($properties = [])
     {
         return sprintf(

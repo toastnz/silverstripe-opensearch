@@ -79,6 +79,14 @@ class OpenSearch
         return $this->normaliseSearchResponse($response);
     }
 
+    public function explainSearch($searchTerm, $indexName = null, array $options = []): array
+    {
+        return $this->search($searchTerm, $indexName, array_merge($options, [
+            'explain' => true,
+            'return_raw' => true,
+        ]));
+    }
+
     public function initIndex(array $fields = [], $indexName = null, array $options = [])
     {
         $index = $this->getIndexDefinition($indexName, $options);

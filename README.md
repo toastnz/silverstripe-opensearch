@@ -109,11 +109,14 @@ The second argument can be:
 
 ## SiteConfig Search Tuning
 
-The bundled `SiteConfigExtension` adds three CMS tabs under `Root.OpenSearch`:
+The bundled `SiteConfigExtension` adds four CMS tabs under `Root.OpenSearch`:
 
 - `Weights` for per-field search weights
 - `FineTune` for search-time query behaviour
 - `Synonyms` for runtime query expansion rules
+- `More` for running a search and reviewing per-result OpenSearch explanations
+
+When `silverstripe/subsites` is installed and the active index declares `SubsiteID` as a filter, the `More` explanation search automatically scopes results to the current CMS subsite from `SubsiteState`, while still including records with `SubsiteID` 0 or no `SubsiteID`.
 
 `FineTune` stores non-default values in `OpenSearchFineTuneSettings` and applies them to generated searches at runtime. The available controls are:
 

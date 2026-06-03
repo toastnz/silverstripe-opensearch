@@ -9,6 +9,12 @@ Toast\OpenSearch\Forms\SearchForm:
 Toast\OpenSearch\Helpers\OpenSearch:
   record_operation_fail_silently: true
 
+SilverStripe\Admin\LeftAndMain:
+  extra_requirements_css:
+    - 'toastnz/opensearch: client/css/opensearch-explain.css'
+  extra_requirements_javascript:
+    - 'toastnz/opensearch: client/javascript/opensearch-explain.js'
+
 SilverStripe\ORM\DataObject:
   extensions:
     - Toast\OpenSearch\Extensions\DataObjectExtension

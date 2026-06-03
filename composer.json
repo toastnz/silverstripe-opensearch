@@ -14,5 +14,10 @@
         "silverstripe/cms": "^6",
         "silverstripe/framework": "^6",
         "opensearch-project/opensearch-php": "^2.5"
+    },
+    "extra": {
+        "expose": [
+            "client"
+        ]
     }
 }

@@ -1,0 +1,120 @@
+.opensearch-explain-field {
+    max-width: 72rem;
+}
+
+.opensearch-explain-control {
+    display: flex;
+    gap: .75rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.opensearch-explain-input {
+    min-width: 18rem;
+    max-width: 36rem;
+    flex: 1 1 18rem;
+}
+
+.opensearch-explain-output {
+    min-height: 28rem;
+    overflow: visible;
+    padding: 1rem;
+    border: 1px solid #c7d0d9;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font-size: .9375rem;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.opensearch-explain-output[hidden] {
+    display: none;
+}
+
+.opensearch-explain-summary {
+    margin: 0 0 1rem;
+    color: inherit;
+}
+
+.opensearch-explain-results {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.opensearch-explain-result {
+    margin: 0 0 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid #e5eaef;
+}
+
+.opensearch-explain-result:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.opensearch-explain-heading {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: .5rem;
+}
+
+.opensearch-explain-title {
+    font-weight: 600;
+}
+
+.opensearch-explain-score {
+    display: inline-block;
+    padding: .125rem .5rem;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    color: inherit;
+    font-size: .8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.opensearch-explain-lines {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: inherit;
+}
+
+.opensearch-explain-lines li {
+    margin-bottom: .25rem;
+}
+
+.opensearch-explain-field-name,
+.opensearch-explain-score-value {
+    font-weight: 600;
+}
+
+.opensearch-explain-term {
+    text-decoration: underline;
+    text-underline-offset: .125em;
+}
+
+.opensearch-explain-calculation {
+    margin-top: .75rem;
+}
+
+.opensearch-explain-calculation-title {
+    margin: 0 0 .35rem;
+    font-size: .9375rem;
+    font-weight: 600;
+    color: inherit;
+}
+
+.opensearch-explain-calculation-lines {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: inherit;
+}
+
+.opensearch-explain-calculation-lines li {
+    margin-bottom: .25rem;
+}

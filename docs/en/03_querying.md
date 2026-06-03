@@ -101,6 +101,14 @@ Each synonym row has two simple lists:
 
 At runtime, the module reads `SiteConfig::current_site_config()->OpenSearchSynonyms()` and generates additional `multi_match` clauses for expanded variants of the entered search term. Changes apply immediately and do not require reindexing or recreating the OpenSearch index.
 
+## SiteConfig Search Explanation
+
+If the bundled `Toast\OpenSearch\Extensions\SiteConfigExtension` is enabled, editors can run a search under `Root.OpenSearch.More` and inspect a formatted list of results with per-result OpenSearch explanations.
+
+This uses the configured default index and the same generated search body as normal site searches, including field weights, fine-tune settings, and runtime synonyms.
+
+If `silverstripe/subsites` is installed and the active index declares a `SubsiteID` filter, the CMS explanation search is automatically scoped to the current CMS subsite from `SubsiteState`. The scope includes records for the current subsite, records with `SubsiteID` 0, and records where `SubsiteID` is missing.
+
 ## Runtime Filters
 
 Runtime filters only apply to fields declared in the index definition's `filters`.

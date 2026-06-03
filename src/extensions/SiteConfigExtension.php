@@ -3,6 +3,7 @@
 namespace Toast\OpenSearch\Extensions;
 
 use SilverStripe\Control\Controller;
+use SilverStripe\Core\Convert;
 use SilverStripe\Core\Extension;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\FieldList;
@@ -201,6 +202,8 @@ class SiteConfigExtension extends Extension
                 )
             );
         }
+
+        $fields->addFieldToTab('Root.OpenSearch.More', $this->getOpenSearchExplainField());
     }
 
     public function onBeforeWrite()
@@ -334,5 +337,31 @@ class SiteConfigExtension extends Extension
         }, $segments);
 
         return implode(' > ', $segments);
+    }
+
+    private function getOpenSearchExplainField(): LiteralField
+    {
+        $controller = Controller::curr();
+        $endpoint = $controller ? Controller::join_links($controller->Link(), 'OpenSearchExplain') : '';
+
+        $html = <<<HTML
+<div class="opensearch-explain-field" data-opensearch-explain data-endpoint="%s">
+    <div class="opensearch-explain-control">
+        <div class="field text opensearch-explain-input">
+            <label class="left" for="OpenSearchExplainSearchInput">Search and Explain</label>
+            <div class="middleColumn">
+                <input type="text" class="text" id="OpenSearchExplainSearchInput" autocomplete="off">
+            </div>
+        </div>
+        <button type="button" class="btn btn-primary font-icon-search" data-opensearch-explain-button>Search</button>
+    </div>
+    <div class="opensearch-explain-output" data-opensearch-explain-output aria-live="polite" hidden></div>
+</div>
+HTML;
+
+        return LiteralField::create(
+            'OpenSearchExplainSearchField',
+            sprintf($html, Convert::raw2att($endpoint))
+        );
     }
 }

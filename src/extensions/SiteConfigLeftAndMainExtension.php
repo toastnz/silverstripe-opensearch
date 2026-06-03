@@ -23,7 +23,8 @@ use Toast\OpenSearch\Search\OpenSearchIndex;
 
 class SiteConfigLeftAndMainExtension extends Extension
 {
-    private const EXPLAIN_RESULT_LIMIT = 10000;
+    private const EXPLAIN_DEFAULT_RESULT_LIMIT = 25;
+    private const EXPLAIN_RESULT_LIMITS = [10, 25, 50, 100];
 
     private static $allowed_actions = [
         'OpenSearchSynonymImportForm',
@@ -147,7 +148,7 @@ class SiteConfigLeftAndMainExtension extends Extension
             $search = OpenSearch::singleton();
             $index = $search->getIndexDefinition();
             $options = $this->withCurrentSubsiteScope($index, $searchTerm, [
-                'size' => self::EXPLAIN_RESULT_LIMIT,
+                'size' => $this->getExplainResultLimit($request),
                 'track_total_hits' => true,
             ]);
             $response = $search->explainSearch($searchTerm, $index, $options);
@@ -158,6 +159,17 @@ class SiteConfigLeftAndMainExtension extends Extension
                 'error' => $exception->getMessage(),
             ], 500);
         }
+    }
+
+    private function getExplainResultLimit(HTTPRequest $request): int
+    {
+        $limit = (int) $request->getVar('Limit');
+
+        if (!in_array($limit, self::EXPLAIN_RESULT_LIMITS, true)) {
+            return self::EXPLAIN_DEFAULT_RESULT_LIMIT;
+        }
+
+        return $limit;
     }
 
     private function getCurrentSiteConfig(): ?SiteConfig

@@ -157,9 +157,10 @@
         output.textContent = message || 'OpenSearch explain failed.';
     };
 
-    var explain = function (holder, input, button, output) {
+    var explain = function (holder, input, limitInput, button, output) {
         var endpoint = holder.getAttribute('data-endpoint') || '';
         var searchTerm = input.value.trim();
+        var limit = limitInput ? limitInput.value : '25';
         var defaultButtonText = button.getAttribute('data-default-text') || button.textContent || 'Search';
 
         if (!endpoint) {
@@ -178,7 +179,7 @@
         clear(output);
         output.textContent = 'Searching...';
 
-        fetch(endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + 'Search=' + encodeURIComponent(searchTerm), {
+        fetch(endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + 'Search=' + encodeURIComponent(searchTerm) + '&Limit=' + encodeURIComponent(limit), {
             credentials: 'same-origin',
             headers: {
                 Accept: 'application/json'
@@ -215,6 +216,7 @@
         }
 
         var input = holder.querySelector('#OpenSearchExplainSearchInput');
+        var limitInput = holder.querySelector('#OpenSearchExplainLimitInput');
         var button = holder.querySelector('[data-opensearch-explain-button]');
         var output = holder.querySelector('[data-opensearch-explain-output]');
 
@@ -227,13 +229,13 @@
         hideOutput(output);
 
         button.addEventListener('click', function () {
-            explain(holder, input, button, output);
+            explain(holder, input, limitInput, button, output);
         });
 
         input.addEventListener('keydown', function (event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                explain(holder, input, button, output);
+                explain(holder, input, limitInput, button, output);
             }
         });
     };

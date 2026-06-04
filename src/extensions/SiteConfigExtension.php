@@ -143,7 +143,7 @@ class SiteConfigExtension extends Extension
                 ->setValue(OpenSearchFineTuneSettings::formatMinScore((float) ($storedFineTuneSettings['min_score'] ?? 0)))
                 ->setAttribute('type', 'range')
                 ->setAttribute('min', '0')
-                ->setAttribute('max', '10')
+                ->setAttribute('max', '30')
                 ->setAttribute('step', '0.1')
                 ->setAttribute(
                     'oninput',

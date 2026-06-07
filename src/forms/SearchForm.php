@@ -12,6 +12,7 @@ use SilverStripe\Model\List\ArrayList;
 use SilverStripe\Model\List\PaginatedList;
 use SilverStripe\ORM\DataObject;
 use Toast\OpenSearch\Helpers\OpenSearch;
+use Toast\OpenSearch\Search\OpenSearchIndex;
 
 class SearchForm extends Form
 {
@@ -48,9 +49,10 @@ class SearchForm extends Form
         $searchTerm = $request->requestVar('Search');
         $this->extend('updateSearchTerm', $searchTerm);
 
-        $result = OpenSearch::singleton()
-            ->search($searchTerm);
-        $result->Matches = $this->hydrateMatches($result->Matches);
+        $search = OpenSearch::singleton();
+        $index = $search->getIndexDefinition();
+        $result = $search->search($searchTerm, $index);
+        $result->Matches = $this->hydrateMatches($result->Matches, $index);
 
         $this->extend('updateResults', $result);
 
@@ -67,12 +69,17 @@ class SearchForm extends Form
         return $results;
     }
 
-    protected function hydrateMatches($matches): ArrayList
+    protected function hydrateMatches($matches, OpenSearchIndex $index): ArrayList
     {
         $records = ArrayList::create();
+        $filterByCanView = $index->shouldFilterSearchResultsByCanView();
 
         foreach ($matches ?: [] as $match) {
             if ($match instanceof DataObject) {
+                if ($filterByCanView && !$index->canViewAsAnonymous($match)) {
+                    continue;
+                }
+
                 $records->push($match);
                 continue;
             }
@@ -84,11 +91,21 @@ class SearchForm extends Form
                 continue;
             }
 
-            if (!class_exists($className)) {
+            if (!class_exists($className) || !is_a($className, DataObject::class, true)) {
                 continue;
             }
 
-            $records->push($className::get()->byID($recordId));
+            $record = $className::get()->byID($recordId);
+
+            if (!$record || !$record->exists()) {
+                continue;
+            }
+
+            if ($filterByCanView && !$index->canViewAsAnonymous($record)) {
+                continue;
+            }
+
+            $records->push($record);
         }
 
         return $records;

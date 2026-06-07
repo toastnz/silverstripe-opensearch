@@ -9,8 +9,10 @@ use SilverStripe\Core\Injector\Injectable;
 use SilverStripe\ErrorPage\ErrorPage;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBField;
+use SilverStripe\Security\Security;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\Versioned\Versioned;
+use Toast\OpenSearch\Models\OpenSearchSynonym;
 use Traversable;
 
 class OpenSearchIndex
@@ -26,6 +28,8 @@ class OpenSearchIndex
     protected array $includedClasses;
     protected array $excludedClasses;
     protected string $filterField;
+    protected bool $indexViewableRecordsOnly;
+    protected int $maxSearchTermLength;
 
     public function __construct(?string $indexName = null)
     {
@@ -50,6 +54,8 @@ class OpenSearchIndex
         ];
 
         $this->filterField = $this->filterField ?? 'ShowInSearch';
+        $this->indexViewableRecordsOnly = $this->indexViewableRecordsOnly ?? true;
+        $this->maxSearchTermLength = $this->maxSearchTermLength ?? 200;
     }
 
     public function getIndexName(): string
@@ -279,6 +285,16 @@ class OpenSearchIndex
         return $this->filterField;
     }
 
+    public function shouldFilterSearchResultsByCanView(): bool
+    {
+        return $this->indexViewableRecordsOnly;
+    }
+
+    public function getMaxSearchTermLength(): int
+    {
+        return max(0, $this->maxSearchTermLength);
+    }
+
     public function getFilters(): array
     {
         return $this->normaliseConfiguredFilters();
@@ -357,6 +373,10 @@ class OpenSearchIndex
             return true;
         }
 
+        if ($this->indexViewableRecordsOnly && !$this->canViewAsAnonymous($record)) {
+            return false;
+        }
+
         $filterField = trim($this->getFilterField());
 
         if ($filterField === '') {
@@ -370,6 +390,19 @@ class OpenSearchIndex
         }
 
         return $this->normaliseFilterFieldValue($filterValue);
+    }
+
+    public function canViewAsAnonymous(DataObject $record): bool
+    {
+        $currentUser = Security::getCurrentUser();
+
+        try {
+            Security::setCurrentUser(null);
+
+            return $record->canView();
+        } finally {
+            Security::setCurrentUser($currentUser);
+        }
     }
 
     public function getDocument($record): array
@@ -1501,29 +1534,19 @@ class OpenSearchIndex
             return [];
         }
 
-        $storedSettings = json_decode((string) ($siteConfig->OpenSearchFineTuneSettings ?? ''), true);
-
-        if (!is_array($storedSettings)) {
-            return [];
-        }
-
-        return OpenSearchFineTuneSettings::normalise($storedSettings);
+        return OpenSearchFineTuneSettings::normalise([
+            'type' => $siteConfig->OpenSearchFineTuneType ?? null,
+            'operator' => $siteConfig->OpenSearchFineTuneOperator ?? null,
+            'minimum_should_match' => $siteConfig->OpenSearchFineTuneMinimumShouldMatch ?? null,
+            'fuzziness' => $siteConfig->OpenSearchFineTuneFuzziness ?? null,
+            'min_score' => $siteConfig->OpenSearchFineTuneMinScore ?? null,
+        ]);
     }
 
     protected function getCustomSynonymRules(): array
     {
         try {
-            $siteConfig = SiteConfig::current_site_config();
-        } catch (\Throwable) {
-            return [];
-        }
-
-        if (!$siteConfig || !$siteConfig->hasMethod('OpenSearchSynonyms')) {
-            return [];
-        }
-
-        try {
-            return OpenSearchSynonymSettings::buildRules($siteConfig->OpenSearchSynonyms());
+            return OpenSearchSynonymSettings::buildRules(OpenSearchSynonym::get());
         } catch (\Throwable) {
             return [];
         }

@@ -29,4 +29,4 @@ SilverStripe\SiteConfig\SiteConfig:
 
 SilverStripe\SiteConfig\SiteConfigLeftAndMain:
   extensions:
-    - Toast\OpenSearch\Extensions\SiteConfigLeftAndMainExtension
+    - Toast\OpenSearch\Extensions\SiteConfigExplainLeftAndMainExtension

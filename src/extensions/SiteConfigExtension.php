@@ -3,23 +3,17 @@
 namespace Toast\OpenSearch\Extensions;
 
 use SilverStripe\Control\Controller;
-use SilverStripe\Core\Convert;
 use SilverStripe\Core\Extension;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
-use SilverStripe\Forms\GridField\GridField;
-use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
-use SilverStripe\Forms\GridField\GridFieldImportButton;
+use SilverStripe\Forms\NumericField;
+use SilverStripe\Model\ArrayData;
 use Toast\OpenSearch\Helpers\OpenSearch;
-use Toast\OpenSearch\Forms\OpenSearchGridFieldExportButton;
-use Toast\OpenSearch\Forms\OpenSearchFineTuneDropdownField;
-use Toast\OpenSearch\Forms\OpenSearchFineTuneRangeField;
 use Toast\OpenSearch\Forms\OpenSearchWeightField;
-use Toast\OpenSearch\Models\OpenSearchSynonym;
 use Toast\OpenSearch\Search\OpenSearchFineTuneSettings;
 use Toast\OpenSearch\Search\OpenSearchIndex;
-use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
 
 class SiteConfigExtension extends Extension
 {
@@ -29,15 +23,11 @@ class SiteConfigExtension extends Extension
 
     private static $db = [
         'OpenSearchRelevanceSettings' => 'Text',
-        'OpenSearchFineTuneSettings' => 'Text',
-    ];
-
-    private static $has_many = [
-        'OpenSearchSynonyms' => OpenSearchSynonym::class,
-    ];
-
-    private static $cascade_deletes = [
-        'OpenSearchSynonyms',
+        'OpenSearchFineTuneType' => 'Varchar(255)',
+        'OpenSearchFineTuneOperator' => 'Varchar(255)',
+        'OpenSearchFineTuneMinimumShouldMatch' => 'Varchar(255)',
+        'OpenSearchFineTuneFuzziness' => 'Varchar(255)',
+        'OpenSearchFineTuneMinScore' => 'Decimal(5,1)',
     ];
 
     public function updateCMSFields(FieldList $fields)
@@ -50,16 +40,15 @@ class SiteConfigExtension extends Extension
 
         $storedWeights = $this->getStoredSearchWeights();
         $defaultWeights = $index->getConfiguredSearchFieldWeights();
+
         $numericFields = [
-            LiteralField::create(
-                'OpenSearchWeightsHelp',
-                '<p style="margin:0 0 1rem;">Use these sliders to tune relevance. Higher values make a field more important in search ranking, while lower values reduce its influence.</p>'
-            ),
+            LiteralField::create('OpenSearchWeightsHelp', '<p style="margin:0 0 1rem;">Use these sliders to tune relevance. Higher values make a field more important in search ranking, while lower values reduce its influence.</p>'),
         ];
 
         foreach ($index->getConfigurableSearchFields() as $fieldName) {
             $defaultWeight = $this->normaliseWeight($defaultWeights[$fieldName] ?? self::WEIGHT_MIN) ?? self::WEIGHT_MIN;
             $value = $storedWeights[$fieldName] ?? $defaultWeight;
+            
             $field = OpenSearchWeightField::create(
                 sprintf('OpenSearchFields[%s]', $fieldName),
                 $this->formatFieldLabel($fieldName)
@@ -75,18 +64,9 @@ class SiteConfigExtension extends Extension
                 ->setAttribute('max', (string) self::WEIGHT_MAX)
                 ->setAttribute('step', $this->formatWeight(0.1))
                 ->setAttribute('data-default-weight', $this->formatWeight($defaultWeight))
-                ->setAttribute(
-                    'oninput',
-                    'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}'
-                )
-                ->setAttribute(
-                    'onchange',
-                    'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}'
-                )
-                ->setAttribute(
-                    'style',
-                    'width:18rem;max-width:100%;padding:0;border:0;box-shadow:none;background:none;background-color:transparent;'
-                );
+                ->setAttribute('oninput', 'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}')
+                ->setAttribute('onchange', 'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}')
+                ->setAttribute('style', 'width:18rem;max-width:100%;padding:0;border:0;box-shadow:none;background:none;background-color:transparent;');
 
             $numericFields[] = $field;
         }
@@ -96,48 +76,26 @@ class SiteConfigExtension extends Extension
         }
 
         $storedFineTuneSettings = $this->getStoredFineTuneSettings();
+        
         $fineTuneFields = [
-            LiteralField::create(
-                'OpenSearchFineTuneHelp',
-                '<p style="margin:0 0 1rem;">Fine-tune how the generated search query behaves. Leaving a setting on its default keeps today&apos;s search behaviour unchanged.</p>'
-            ),
-            OpenSearchFineTuneDropdownField::create(
-                'OpenSearchFineTune[type]',
-                'Search mode',
-                OpenSearchFineTuneSettings::getSearchModeFieldOptions()
-            )
-                ->setFineTuneSettingName('type')
+            LiteralField::create('OpenSearchFineTuneHelp', '<p style="margin:0 0 1rem;">Fine-tune how the generated search query behaves. Leaving a setting on its default keeps today&apos;s search behaviour unchanged.</p>'),
+            DropdownField::create('OpenSearchFineTuneType', 'Search mode', OpenSearchFineTuneSettings::getSearchModeFieldOptions())
                 ->setValue(OpenSearchFineTuneSettings::getSearchModeStoredValue($storedFineTuneSettings['type'] ?? null))
                 ->setDescription('Controls how matches across multiple fields are combined. The default usually works best for general site search.'),
-            OpenSearchFineTuneDropdownField::create(
-                'OpenSearchFineTune[operator]',
-                'Match strictness',
-                OpenSearchFineTuneSettings::getOperatorFieldOptions()
-            )
-                ->setFineTuneSettingName('operator')
+
+            DropdownField::create('OpenSearchFineTuneOperator', 'Match strictness', OpenSearchFineTuneSettings::getOperatorFieldOptions())
                 ->setValue(OpenSearchFineTuneSettings::getOperatorStoredValue($storedFineTuneSettings['operator'] ?? null))
                 ->setDescription('Choose whether a result can match any search word or must match them all. Stricter matching usually returns fewer results.'),
-            OpenSearchFineTuneDropdownField::create(
-                'OpenSearchFineTune[minimum_should_match]',
-                'Minimum words to match',
-                OpenSearchFineTuneSettings::getMinimumShouldMatchFieldOptions()
-            )
-                ->setFineTuneSettingName('minimum_should_match')
+
+            DropdownField::create('OpenSearchFineTuneMinimumShouldMatch', 'Minimum words to match', OpenSearchFineTuneSettings::getMinimumShouldMatchFieldOptions())
                 ->setValue(OpenSearchFineTuneSettings::getMinimumShouldMatchStoredValue($storedFineTuneSettings['minimum_should_match'] ?? null))
                 ->setDescription('Choose how many of the search words should match before a result is included. Higher values make search stricter.'),
-            OpenSearchFineTuneDropdownField::create(
-                'OpenSearchFineTune[fuzziness]',
-                'Typo tolerance',
-                OpenSearchFineTuneSettings::getFuzzinessFieldOptions()
-            )
-                ->setFineTuneSettingName('fuzziness')
+
+            DropdownField::create('OpenSearchFineTuneFuzziness', 'Typo tolerance', OpenSearchFineTuneSettings::getFuzzinessFieldOptions())
                 ->setValue(OpenSearchFineTuneSettings::getFuzzinessStoredValue($storedFineTuneSettings['fuzziness'] ?? null))
                 ->setDescription('Allows near matches when someone misspells a word. Higher values are more forgiving, but can also make results broader. This setting is ignored for Exact phrase, Phrase prefix, and combined-field search modes.'),
-            OpenSearchFineTuneRangeField::create(
-                'OpenSearchFineTune[min_score]',
-                'Minimum score cutoff'
-            )
-                ->setFineTuneSettingName('min_score')
+            
+            NumericField::create('OpenSearchFineTuneMinScore', 'Minimum score cutoff')
                 ->setHTML5(true)
                 ->setScale(1)
                 ->setValue(OpenSearchFineTuneSettings::formatMinScore((float) ($storedFineTuneSettings['min_score'] ?? 0)))
@@ -145,62 +103,14 @@ class SiteConfigExtension extends Extension
                 ->setAttribute('min', '0')
                 ->setAttribute('max', '30')
                 ->setAttribute('step', '0.1')
-                ->setAttribute(
-                    'oninput',
-                    'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}'
-                )
-                ->setAttribute(
-                    'onchange',
-                    'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}'
-                )
-                ->setAttribute(
-                    'style',
-                    'width:18rem;max-width:100%;padding:0;border:0;box-shadow:none;background:none;background-color:transparent;'
-                )
+                ->setAttribute('oninput', 'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}')
+                ->setAttribute('onchange', 'if(this.nextElementSibling){var v=Number(this.value).toFixed(1);this.nextElementSibling.value=v;this.nextElementSibling.textContent=v;}')
+                ->setAttribute('style', 'width:18rem;max-width:100%;padding:0;border:0;box-shadow:none;background:none;background-color:transparent;')
                 ->setDescription('Hide weaker matches. Set this to 0 to keep the default behaviour. Scores are relative, so small increases can make a big difference.'),
         ];
 
         if ($fineTuneFields !== []) {
             $fields->addFieldsToTab('Root.OpenSearch.FineTune', $fineTuneFields);
-        }
-
-        if ($this->owner->ID) {
-            $config = GridFieldConfig_RecordEditor::create();
-            $config->addComponent(new GridFieldOrderableRows('SortOrder'));
-            $config->addComponent(
-                OpenSearchGridFieldExportButton::create('buttons-before-left', [
-                    'SearchTerms' => 'SearchTerms',
-                    'SynonymTerms' => 'SynonymTerms',
-                ])
-            );
-
-            $controller = Controller::curr();
-
-            if ($controller && $controller->hasMethod('OpenSearchSynonymImportForm')) {
-                $config->addComponent(
-                    GridFieldImportButton::create('buttons-before-left')
-                        ->setImportForm($controller->OpenSearchSynonymImportForm())
-                        ->setModalTitle('Import synonym rules from CSV')
-                );
-            }
-
-            $fields->addFieldToTab(
-                'Root.OpenSearch.Synonyms',
-                GridField::create(
-                    'OpenSearchSynonyms',
-                    'Synonym rules',
-                    $this->owner->OpenSearchSynonyms(),
-                    $config
-                )
-            );
-        } else {
-            $fields->addFieldToTab(
-                'Root.OpenSearch.Synonyms',
-                LiteralField::create(
-                    'OpenSearchSynonymsSaveFirst',
-                    '<p style="margin:0;color:#5b6574;">Save the site configuration first to start adding synonym rules.</p>'
-                )
-            );
         }
 
         $fields->addFieldToTab('Root.OpenSearch.More', $this->getOpenSearchExplainField());
@@ -241,15 +151,15 @@ class SiteConfigExtension extends Extension
 
         $this->owner->OpenSearchRelevanceSettings = $weights === [] ? null : json_encode($weights);
 
-        $submittedFineTuneSettings = $this->owner->getField('OpenSearchFineTune');
+        $fineTuneSettings = OpenSearchFineTuneSettings::normalise($this->getSubmittedFineTuneSettings());
 
-        if (!is_array($submittedFineTuneSettings)) {
-            $submittedFineTuneSettings = [];
-        }
-
-        $fineTuneSettings = OpenSearchFineTuneSettings::normalise($submittedFineTuneSettings);
-
-        $this->owner->OpenSearchFineTuneSettings = $fineTuneSettings === [] ? null : json_encode($fineTuneSettings);
+        $this->owner->OpenSearchFineTuneType = $fineTuneSettings['type'] ?? null;
+        $this->owner->OpenSearchFineTuneOperator = $fineTuneSettings['operator'] ?? null;
+        $this->owner->OpenSearchFineTuneMinimumShouldMatch = $fineTuneSettings['minimum_should_match'] ?? null;
+        $this->owner->OpenSearchFineTuneFuzziness = isset($fineTuneSettings['fuzziness'])
+            ? (string) $fineTuneSettings['fuzziness']
+            : null;
+        $this->owner->OpenSearchFineTuneMinScore = $fineTuneSettings['min_score'] ?? 0;
     }
 
     private function getIndexDefinition(): ?OpenSearchIndex
@@ -290,13 +200,24 @@ class SiteConfigExtension extends Extension
 
     private function getStoredFineTuneSettings(): array
     {
-        $storedSettings = json_decode((string) ($this->owner->OpenSearchFineTuneSettings ?? ''), true);
+        return OpenSearchFineTuneSettings::normalise([
+            'type' => $this->owner->OpenSearchFineTuneType ?? null,
+            'operator' => $this->owner->OpenSearchFineTuneOperator ?? null,
+            'minimum_should_match' => $this->owner->OpenSearchFineTuneMinimumShouldMatch ?? null,
+            'fuzziness' => $this->owner->OpenSearchFineTuneFuzziness ?? null,
+            'min_score' => $this->owner->OpenSearchFineTuneMinScore ?? null,
+        ]);
+    }
 
-        if (!is_array($storedSettings)) {
-            return [];
-        }
-
-        return OpenSearchFineTuneSettings::normalise($storedSettings);
+    private function getSubmittedFineTuneSettings(): array
+    {
+        return [
+            'type' => $this->owner->getField('OpenSearchFineTuneType'),
+            'operator' => $this->owner->getField('OpenSearchFineTuneOperator'),
+            'minimum_should_match' => $this->owner->getField('OpenSearchFineTuneMinimumShouldMatch'),
+            'fuzziness' => $this->owner->getField('OpenSearchFineTuneFuzziness'),
+            'min_score' => $this->owner->getField('OpenSearchFineTuneMinScore'),
+        ];
     }
 
     private function normaliseWeight($weight): ?float
@@ -344,33 +265,10 @@ class SiteConfigExtension extends Extension
         $controller = Controller::curr();
         $endpoint = $controller ? Controller::join_links($controller->Link(), 'OpenSearchExplain') : '';
 
-        $html = <<<HTML
-<div class="opensearch-explain-field" data-opensearch-explain data-endpoint="%s">
-    <div class="opensearch-explain-control">
-        <div class="field text opensearch-explain-input">
-            <label class="left" for="OpenSearchExplainSearchInput">Search and Explain</label>
-            <div class="middleColumn">
-                <input type="text" class="text" id="OpenSearchExplainSearchInput" autocomplete="off">
-            </div>
-            <label class="left" for="OpenSearchExplainLimitInput">Results to show</label>
-            <div class="middleColumn">
-                <select class="dropdown" id="OpenSearchExplainLimitInput">
-                    <option value="10">10</option>
-                    <option value="25" selected>25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-            </div>
-        </div>
-        <button type="button" class="btn btn-primary font-icon-search" data-opensearch-explain-button>Search</button>
-    </div>
-    <div class="opensearch-explain-output" data-opensearch-explain-output aria-live="polite" hidden></div>
-</div>
-HTML;
+        $html = ArrayData::create([
+            'Endpoint' => $endpoint,
+        ])->renderWith('Toast\\OpenSearch\\Includes\\OpenSearchExplainField');
 
-        return LiteralField::create(
-            'OpenSearchExplainSearchField',
-            sprintf($html, Convert::raw2att($endpoint))
-        );
+        return LiteralField::create('OpenSearchExplainSearchField', $html);
     }
 }

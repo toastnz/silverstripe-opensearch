@@ -56,6 +56,7 @@ class OpenSearch
     public function search($searchTerm, $indexName = null, array $options = [])
     {
         $index = $this->getIndexDefinition($indexName, $options);
+        $searchTerm = $this->limitSearchTerm($searchTerm, $index->getMaxSearchTermLength());
         $params = $options;
         $params['index'] = $index->getIndexName();
 
@@ -440,6 +441,21 @@ class OpenSearch
             'Aggregations' => $response['aggregations'] ?? [],
             'Raw' => $response,
         ]);
+    }
+
+    protected function limitSearchTerm($searchTerm, int $maxLength): string
+    {
+        $searchTerm = (string) $searchTerm;
+
+        if ($maxLength < 1) {
+            return '';
+        }
+
+        if (function_exists('mb_substr')) {
+            return mb_substr($searchTerm, 0, $maxLength, 'UTF-8');
+        }
+
+        return substr($searchTerm, 0, $maxLength);
     }
 
     protected function buildIndexBody(array $fields, array $options): array

@@ -5,7 +5,6 @@ namespace Toast\OpenSearch\Models;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\TextareaField;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\SiteConfig\SiteConfig;
 
 class OpenSearchSynonym extends DataObject
 {
@@ -14,11 +13,6 @@ class OpenSearchSynonym extends DataObject
     private static $db = [
         'SearchTerms' => 'Text',
         'SynonymTerms' => 'Text',
-        'SortOrder' => 'Int',
-    ];
-
-    private static $has_one = [
-        'SiteConfig' => SiteConfig::class,
     ];
 
     private static $summary_fields = [
@@ -26,16 +20,9 @@ class OpenSearchSynonym extends DataObject
         'SynonymTerms' => 'Also search for these',
     ];
 
-    private static $default_sort = 'SortOrder ASC, ID ASC';
-
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
-
-        $fields->removeByName([
-            'SiteConfigID',
-            'SortOrder',
-        ]);
 
         $fields->addFieldsToTab('Root.Main', [
             TextareaField::create('SearchTerms', 'When searching for these')
